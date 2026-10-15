@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#07131F" />
+  <meta name="description" content="Dr. John Smith — Cardiologist. Advanced cardiac care with a patient-first approach." />
+  <title>Dr. John Smith · Cardiologist</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════════════════
+       FULL-PAGE ANIMATED BACKGROUND
+       The heart image is fixed behind every section.
+       Swap hero-bg.png with your video/canvas later.
+  ═══════════════════════════════════════════════════════ -->
+  <div class="page-bg" aria-hidden="true">
+    <img src="hero-bg.png" alt="" />
+  </div>
+  <!-- Edge-darkening veil so text is always readable -->
+  <div class="page-veil" aria-hidden="true"></div>
+
+  <!-- ══ NAV ════════════════════════════════════════════ -->
+  <header class="site-header" id="site-header">
+    <div class="nav-wrap">
+      <a href="#home" class="nav-logo">
+        <span class="logo-text">JS</span><span class="logo-dot"></span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#about">About</a></li>
+        <li><a href="#expertise">Expertise</a></li>
+        <li><a href="#experience">Experience</a></li>
+        <li><a href="#contact" class="nav-cta">Book Appointment</a></li>
+      </ul>
+      <button class="hamburger" id="hamburger" aria-label="Menu" aria-expanded="false">
+        <span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Full-screen mobile menu -->
+  <div class="mobile-menu" id="mobile-menu">
+    <div class="mm-inner">
+      <nav class="mm-nav">
+        <a href="#home"       class="mm-link" data-n="01">Home</a>
+        <a href="#about"      class="mm-link" data-n="02">About</a>
+        <a href="#expertise"  class="mm-link" data-n="03">Expertise</a>
+        <a href="#experience" class="mm-link" data-n="04">Experience</a>
+        <a href="#contact"    class="mm-link" data-n="05">Contact</a>
+      </nav>
+      <a href="#contact" class="mm-book">Book an Appointment</a>
+      <a href="tel:+919495492013" class="mm-phone">+91 94954 92013</a>
+    </div>
+  </div>
+
+  <!-- ══ HERO ═══════════════════════════════════════════ -->
+  <section class="hero" id="home">
+    <!-- hero-anim hidden — page-bg handles image background -->
+    <div class="hero-anim" id="hero-animation" aria-hidden="true"></div>
+
+    <!-- Bottom veil for hero text readability -->
+    <div class="hero-veil"></div>
+
+    <div class="hero-body">
+      <div class="hero-inner">
+
+        <div class="hero-chip reveal">
+          <span class="chip-dot"></span>Accepting new patients
+        </div>
+
+        <div class="hero-name-block reveal" style="--d:.1s">
+          <p class="hero-dr">Dr.</p>
+          <h1 class="hero-name">John<br>Smith</h1>
+        </div>
+
+        <div class="hero-rule reveal" style="--d:.2s">
+          <span class="rule-line"></span>
+          <span class="rule-text">Cardiologist</span>
+          <span class="rule-line"></span>
+        </div>
+
+        <div class="hero-glass-card reveal" style="--d:.3s">
+          <p class="hgc-quote">"Advanced cardiac care with a patient-first approach."</p>
+          <div class="hgc-meta">
+            <div class="hgc-stat">
+              <span class="hgc-num">15<sup>+</sup></span>
+              <span class="hgc-lbl">Years</span>
+            </div>
+            <div class="hgc-divider"></div>
+            <div class="hgc-stat">
+              <span class="hgc-num">10k<sup>+</sup></span>
+              <span class="hgc-lbl">Patients</span>
+            </div>
+            <div class="hgc-divider"></div>
+            <div class="hgc-stat">
+              <span class="hgc-num">20<sup>+</sup></span>
+              <span class="hgc-lbl">Publications</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-ctas reveal" style="--d:.4s">
+          <a href="#contact" class="btn-cyan">
+            Book Appointment
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a href="tel:+919495492013" class="btn-glass">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.4 1.13 2 2 0 012 .18h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16z"/></svg>
+            +91 94954 92013
+          </a>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="scroll-hint">
+      <div class="sh-line"></div>
+    </div>
+  </section>
+
+  <!-- ══ ABOUT ══════════════════════════════════════════ -->
+  <section class="section" id="about">
+    <div class="about-section-wrap">
+      <div class="about-glass-panel">
+        <div class="about-layout">
+
+          <div class="about-photo reveal" style="--d:.05s">
+            <div class="photo-wrap">
+              <img
+                src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=500&q=80&fit=crop&crop=face"
+                alt="Dr. John Smith"
+                loading="lazy"
+              />
+              <div class="photo-frame"></div>
+            </div>
+          </div>
+
+          <div class="about-info">
+            <p class="sec-label reveal">— About</p>
+            <h2 class="sec-heading reveal" style="--d:.08s">Dedicated to<br><em>exceptional care.</em></h2>
+            <p class="about-bio reveal" style="--d:.12s">
+              Board-certified cardiologist with 15+ years in advanced cardiovascular medicine. Trained at AIIMS New Delhi and Mayo Clinic, USA — combining cutting-edge diagnostics with genuine compassion for every patient.
+            </p>
+            <div class="qual-chips reveal" style="--d:.16s">
+              <span class="qchip">MBBS · MD · DM</span>
+              <span class="qchip">Interventional Cardiology</span>
+              <span class="qchip">FACC · FESC</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ EXPERTISE ══════════════════════════════════════ -->
+  <section class="section" id="expertise">
+    <div class="expertise-wrap">
+      <p class="sec-label reveal">— Expertise</p>
+      <h2 class="sec-heading reveal" style="--d:.08s">Clinical<br><em>specializations.</em></h2>
+
+      <div class="cards-grid">
+
+        <div class="glass-card reveal" style="--d:.05s">
+          <div class="gc-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+          </div>
+          <h3 class="gc-title">Interventional Cardiology</h3>
+          <p class="gc-desc">Complex coronary angioplasty, stenting &amp; catheter-based procedures.</p>
+        </div>
+
+        <div class="glass-card reveal" style="--d:.09s">
+          <div class="gc-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <h3 class="gc-title">Echocardiography</h3>
+          <p class="gc-desc">Advanced 2D/3D echo &amp; stress imaging for cardiac evaluation.</p>
+        </div>
+
+        <div class="glass-card reveal" style="--d:.13s">
+          <div class="gc-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <h3 class="gc-title">Preventive Cardiology</h3>
+          <p class="gc-desc">Risk profiling, lifestyle medicine &amp; long-term heart health.</p>
+        </div>
+
+        <div class="glass-card reveal" style="--d:.17s">
+          <div class="gc-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+          </div>
+          <h3 class="gc-title">Electrophysiology</h3>
+          <p class="gc-desc">Arrhythmia ablation, pacemaker &amp; ICD implantation therapy.</p>
+        </div>
+
+        <div class="glass-card reveal" style="--d:.21s">
+          <div class="gc-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </div>
+          <h3 class="gc-title">Structural Heart</h3>
+          <p class="gc-desc">TAVR, MitraClip &amp; transcatheter valve interventions.</p>
+        </div>
+
+        <div class="glass-card reveal" style="--d:.25s">
+          <div class="gc-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </div>
+          <h3 class="gc-title">Heart Failure</h3>
+          <p class="gc-desc">Advanced device therapies &amp; cardiac resynchronization treatment.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ EXPERIENCE ═════════════════════════════════════ -->
+  <section class="section" id="experience">
+    <div class="experience-wrap">
+      <p class="sec-label reveal">— Experience</p>
+      <h2 class="sec-heading reveal" style="--d:.08s">Career<br><em>milestones.</em></h2>
+
+      <div class="timeline">
+
+        <div class="tl-item reveal" style="--d:.05s">
+          <div class="tl-left">
+            <div class="tl-dot"></div>
+            <div class="tl-line"></div>
+          </div>
+          <div class="tl-glass">
+            <span class="tl-badge">Current</span>
+            <p class="tl-year">2018 — Present</p>
+            <h3 class="tl-role">Senior Consultant Cardiologist</h3>
+            <p class="tl-place">Apollo Hospitals, Chennai</p>
+          </div>
+        </div>
+
+        <div class="tl-item reveal" style="--d:.1s">
+          <div class="tl-left">
+            <div class="tl-dot"></div>
+            <div class="tl-line"></div>
+          </div>
+          <div class="tl-glass">
+            <p class="tl-year">2012 — 2018</p>
+            <h3 class="tl-role">Consultant Cardiologist</h3>
+            <p class="tl-place">Fortis Healthcare, Mumbai</p>
+          </div>
+        </div>
+
+        <div class="tl-item reveal" style="--d:.15s">
+          <div class="tl-left">
+            <div class="tl-dot"></div>
+            <div class="tl-line"></div>
+          </div>
+          <div class="tl-glass">
+            <p class="tl-year">2009 — 2012</p>
+            <h3 class="tl-role">Clinical Fellow — Interventional Cardiology</h3>
+            <p class="tl-place">Mayo Clinic, Rochester, USA</p>
+          </div>
+        </div>
+
+        <div class="tl-item reveal" style="--d:.2s">
+          <div class="tl-left">
+            <div class="tl-dot tl-dot--last"></div>
+          </div>
+          <div class="tl-glass">
+            <p class="tl-year">2005 — 2009</p>
+            <h3 class="tl-role">DM Cardiology · Senior Resident</h3>
+            <p class="tl-place">AIIMS, New Delhi</p>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="cred-strip reveal" style="--d:.25s">
+        <div class="cred-pill">FACC</div>
+        <div class="cred-pill">FESC</div>
+        <div class="cred-pill">NBE Certified</div>
+        <div class="cred-pill">20+ Publications</div>
+        <div class="cred-pill">Times Health Award 2023</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══ CONTACT ════════════════════════════════════════ -->
+  <section class="section" id="contact">
+    <div class="contact-wrap">
+      <div class="contact-glass-wrap reveal">
+        <p class="sec-label" style="text-align:center">— Appointments</p>
+        <h2 class="sec-heading" style="text-align:center;margin-bottom:8px">Your health deserves<br><em>expert care.</em></h2>
+        <p class="contact-sub">Schedule a consultation and take the first step toward a healthier heart.</p>
+
+        <div class="contact-btns">
+          <a href="tel:+919495492013" class="btn-cyan btn-lg">
+            Book an Appointment
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a href="tel:+919495492013" class="contact-call">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.4 1.13 2 2 0 012 .18h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16z"/></svg>
+            +91 94954 92013
+          </a>
+        </div>
+
+        <div class="info-row">
+          <div class="info-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span>Apollo Hospitals, Chennai — 600006</span>
+          </div>
+          <div class="info-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span>Mon–Fri 10AM–6PM · Sat 10AM–2PM</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ FOOTER ═════════════════════════════════════════ -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <span class="logo-text">JS</span><span class="logo-dot"></span>
+          <span class="footer-name">Dr. John Smith · Cardiologist</span>
+        </div>
+        <div class="footer-socials">
+          <a href="#" class="soc" aria-label="LinkedIn">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+          </a>
+          <a href="#" class="soc" aria-label="Twitter">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"/></svg>
+          </a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 Dr. John Smith. All rights reserved.</p>
+        <p class="footer-disc">For informational purposes only — not medical advice.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ══ MOBILE BOTTOM BAR ══════════════════════════════ -->
+  <div class="bottom-bar" id="bottom-bar">
+    <a href="tel:+919495492013" class="bb-btn bb-call">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.4 1.13 2 2 0 012 .18h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16z"/></svg>
+      Call
+    </a>
+    <div class="bb-sep"></div>
+    <a href="#contact" class="bb-btn bb-book">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Book Appointment
+    </a>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
