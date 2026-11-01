@@ -91,6 +91,7 @@
         <button class="filter-tab" data-filter="unread">Unread <span class="filter-count" id="countUnread">0</span></button>
         <button class="filter-tab" data-filter="open">Open</button>
         <button class="filter-tab" data-filter="resolved">Resolved</button>
+        <button class="filter-tab" data-filter="appointments" id="tabAppointments">📅 Bookings <span class="filter-count count-green" id="countAppointments">0</span></button>
       </div>
 
       <!-- Conversation List -->
@@ -197,7 +198,16 @@
         <div class="details-section">
           <div class="details-avatar" id="detAvatar">JS</div>
           <h4 class="det-name" id="detName">Anonymous Visitor</h4>
+          <div class="det-age-row"><span id="detAge">—</span></div>
           <span class="status-pill status-new" id="detStatusBadge">NEW</span>
+        </div>
+
+        <!-- Booked Appointments for this Visitor -->
+        <div class="details-section" id="detApptSection">
+          <label class="det-label">Appointments</label>
+          <div class="det-appts-list" id="detApptsList">
+            <span class="det-no-appts">No appointment requests yet.</span>
+          </div>
         </div>
 
         <!-- Direct Contact Actions -->

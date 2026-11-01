@@ -6,7 +6,10 @@ const express = require('express');
 const { WebSocketServer } = require('ws');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+require('dotenv').config();
+
 const DB = require('./db.js');
+const { generateAIResponse, CLINIC_KNOWLEDGE } = require('./ai-engine.js');
 
 const app = express();
 const server = http.createServer(app);
@@ -19,7 +22,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'doctor_luxury_medical_secret_key_2
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Security Headers (CSP, CORS, Frame options)
+// Security Headers
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
@@ -106,18 +109,21 @@ wss.on('connection', (ws, req) => {
       // Visitor socket registration
       if (data.action === 'auth_visitor') {
         const { conversationId, visitorToken } = data;
-        const conv = DB.getConversationByToken(conversationId, visitorToken);
-        if (conv) {
-          ws.role = 'visitor';
-          ws.conversationId = conversationId;
-          if (!conversationSockets.has(conversationId)) {
-            conversationSockets.set(conversationId, new Set());
+        const visitor = DB.getVisitorByToken(visitorToken);
+        if (visitor) {
+          const conv = DB.getConversationForVisitor(visitor.id, conversationId);
+          if (conv) {
+            ws.role = 'visitor';
+            ws.conversationId = conv.id;
+            if (!conversationSockets.has(conv.id)) {
+              conversationSockets.set(conv.id, new Set());
+            }
+            conversationSockets.get(conv.id).add(ws);
+            ws.send(JSON.stringify({ event: 'auth_success', role: 'visitor', conversationId: conv.id }));
+            return;
           }
-          conversationSockets.get(conversationId).add(ws);
-          ws.send(JSON.stringify({ event: 'auth_success', role: 'visitor', conversationId }));
-        } else {
-          ws.send(JSON.stringify({ event: 'auth_error', message: 'Invalid conversation credentials' }));
         }
+        ws.send(JSON.stringify({ event: 'auth_error', message: 'Invalid visitor credentials' }));
         return;
       }
 
@@ -158,7 +164,6 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-// Heartbeat interval for stale connections
 const heartbeat = setInterval(() => {
   wss.clients.forEach(ws => {
     if (!ws.isAlive) return ws.terminate();
@@ -166,180 +171,278 @@ const heartbeat = setInterval(() => {
     ws.ping();
   });
 }, 30000);
-
 wss.on('close', () => clearInterval(heartbeat));
 
 // ============================================================================
-// REST API: VISITOR CHAT ENDPOINTS
+// REST API: VISITOR REGISTRATION & SESSION MANAGEMENT
 // ============================================================================
 
-// 1. Initialize or resume a conversation session
-app.post('/api/chat/session', (req, res) => {
+// 1. Visitor Registration
+app.post('/api/visitor/register', (req, res) => {
   try {
-    let { visitorId, visitorToken, visitorName, visitorPhone } = req.body;
+    const { username, age, phone, existingToken } = req.body;
 
-    if (!visitorId || typeof visitorId !== 'string') {
-      visitorId = 'vis_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    if (!username || !username.trim()) {
+      return res.status(400).json({ error: 'Please provide your full name or username.' });
     }
-    if (!visitorToken || typeof visitorToken !== 'string') {
-      visitorToken = 'tok_' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    const parsedAge = parseInt(age, 10);
+    if (isNaN(parsedAge) || parsedAge < 1 || parsedAge > 120) {
+      return res.status(400).json({ error: 'Please enter a valid age between 1 and 120.' });
     }
 
-    const conversation = DB.getOrCreateConversation({
-      visitorId,
-      visitorToken,
-      visitorName: visitorName || '',
-      visitorPhone: visitorPhone || ''
+    const visitor = DB.registerVisitor({
+      username: username.trim(),
+      age: parsedAge,
+      phone: phone ? phone.trim() : '',
+      existingToken
     });
 
+    const conversation = DB.getOrCreateConversation(visitor.id);
     const messages = DB.getMessages(conversation.id);
+
+    // Notify admin
+    broadcastToAdmin({
+      event: 'visitor_registered',
+      visitor,
+      conversation
+    });
 
     res.json({
       success: true,
+      visitor: {
+        id: visitor.id,
+        username: visitor.username,
+        age: visitor.age,
+        phone: visitor.phone
+      },
+      visitorToken: visitor.visitor_token,
       conversationId: conversation.id,
-      visitorId: conversation.visitor_id,
-      visitorToken: conversation.visitor_token,
-      visitorName: conversation.visitor_name,
-      visitorPhone: conversation.visitor_phone,
-      status: conversation.status,
       messages
     });
   } catch (err) {
-    console.error('[API /api/chat/session error]:', err);
-    res.status(500).json({ error: 'Failed to initialize chat session' });
+    console.error('[API /api/visitor/register error]:', err.message);
+    res.status(400).json({ error: err.message || 'Registration failed' });
   }
 });
 
-// 2. Fetch conversation messages (Visitor authentication enforced via visitorToken)
-app.get('/api/chat/messages', (req, res) => {
+// 2. Validate Session & Load Active Messages
+app.get('/api/chat/session', (req, res) => {
   try {
-    const conversationId = req.query.conversationId;
     const visitorToken = req.query.visitorToken || req.headers['x-visitor-token'];
 
-    if (!conversationId || !visitorToken) {
-      return res.status(400).json({ error: 'conversationId and visitorToken required' });
+    if (!visitorToken) {
+      return res.json({ success: false, requiresRegistration: true });
     }
 
-    const conv = DB.getConversationByToken(conversationId, visitorToken);
-    if (!conv) {
-      return res.status(403).json({ error: 'Access denied: Invalid conversation credentials' });
+    const visitor = DB.getVisitorByToken(visitorToken);
+    if (!visitor) {
+      return res.json({ success: false, requiresRegistration: true });
     }
 
-    // Mark admin messages as read by visitor
-    DB.markConversationRead(conversationId, 'visitor');
+    const conv = DB.getOrCreateConversation(visitor.id);
+    DB.markConversationRead(conv.id, 'visitor');
 
-    const messages = DB.getMessages(conversationId);
-    res.json({ success: true, conversation: conv, messages });
+    const messages = DB.getMessages(conv.id);
+    const appointments = DB.getAppointmentsForConversation(conv.id);
+
+    res.json({
+      success: true,
+      requiresRegistration: false,
+      visitor: {
+        id: visitor.id,
+        username: visitor.username,
+        age: visitor.age,
+        phone: visitor.phone
+      },
+      visitorToken: visitor.visitor_token,
+      conversationId: conv.id,
+      status: conv.status,
+      messages,
+      appointments
+    });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to retrieve messages' });
+    console.error('[API /api/chat/session error]:', err);
+    res.status(500).json({ error: 'Failed to verify session' });
   }
 });
 
-// 3. Send a message from visitor (creates enquiry automatically)
-app.post('/api/chat/send', (req, res) => {
+// 3. Send Message (Visitor) with Automatic AI Assistant Integration
+app.post('/api/chat/send', async (req, res) => {
   try {
-    let { conversationId, visitorId, visitorToken, messageText, visitorName, visitorPhone } = req.body;
+    let { visitorToken, messageText, conversationId } = req.body;
 
     if (!messageText || !messageText.trim()) {
       return res.status(400).json({ error: 'Message text cannot be empty' });
     }
-
-    // Sanitize input length
-    if (messageText.length > 2000) {
-      return res.status(400).json({ error: 'Message exceeds maximum length of 2000 characters' });
+    if (messageText.length > 2500) {
+      return res.status(400).json({ error: 'Message exceeds maximum length' });
     }
 
-    // If conversation doesn't exist yet, create one automatically
-    let conv = null;
-    if (conversationId && visitorToken) {
-      conv = DB.getConversationByToken(conversationId, visitorToken);
+    if (!visitorToken) {
+      return res.status(401).json({ error: 'Registration required before sending messages', requiresRegistration: true });
     }
 
-    if (!conv) {
-      if (!visitorId) visitorId = 'vis_' + Math.random().toString(36).slice(2, 10);
-      if (!visitorToken) visitorToken = 'tok_' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-      conv = DB.getOrCreateConversation({
-        visitorId,
-        visitorToken,
-        visitorName: visitorName || '',
-        visitorPhone: visitorPhone || ''
-      });
-      conversationId = conv.id;
-    } else {
-      // Update name/phone if visitor provided in payload
-      if (visitorName || visitorPhone) {
-        conv = DB.updateVisitorDetails(conversationId, {
-          name: visitorName || undefined,
-          phone: visitorPhone || undefined
-        });
-      }
+    const visitor = DB.getVisitorByToken(visitorToken);
+    if (!visitor) {
+      return res.status(401).json({ error: 'Invalid visitor session token', requiresRegistration: true });
     }
 
-    const senderDisplayName = conv.visitor_name || 'Visitor';
-    const message = DB.addMessage({
-      conversationId,
+    const conv = DB.getOrCreateConversation(visitor.id);
+    const currentConvId = conv.id;
+
+    // 1. Save visitor message
+    const visitorMsg = DB.addMessage({
+      conversationId: currentConvId,
       senderType: 'visitor',
-      senderName: senderDisplayName,
+      senderName: visitor.username,
       messageText: messageText.trim()
     });
 
-    const updatedConv = DB.getConversationById(conversationId);
+    const updatedConv = DB.getConversationById(currentConvId);
 
-    // Broadcast to Admin real-time inbox
+    // Broadcast visitor message immediately
     broadcastToAdmin({
       event: 'new_enquiry_message',
-      conversationId,
+      conversationId: currentConvId,
       conversation: updatedConv,
-      message
+      message: visitorMsg
     });
 
-    // Broadcast to any visitor socket connected for this conversation
-    broadcastToConversation(conversationId, {
+    broadcastToConversation(currentConvId, {
       event: 'new_message',
-      message
+      message: visitorMsg
     });
 
+    // Send immediate response back to HTTP caller
     res.json({
       success: true,
-      conversationId,
-      visitorId: conv.visitor_id,
-      visitorToken: conv.visitor_token,
-      message,
-      conversation: updatedConv
+      conversationId: currentConvId,
+      message: visitorMsg
     });
+
+    // 2. Trigger AI Conversational Assistant
+    // Simulate natural clinical reading & typing time
+    setTimeout(async () => {
+      try {
+        // Send typing indicator to visitor
+        broadcastToConversation(currentConvId, {
+          event: 'typing',
+          conversationId: currentConvId,
+          senderType: 'admin',
+          isTyping: true
+        });
+
+        const history = DB.getMessages(currentConvId);
+        const aiResponse = await generateAIResponse({
+          visitor,
+          conversationId: currentConvId,
+          messageText,
+          history,
+          DB
+        });
+
+        // Turn off typing indicator
+        broadcastToConversation(currentConvId, {
+          event: 'typing',
+          conversationId: currentConvId,
+          senderType: 'admin',
+          isTyping: false
+        });
+
+        if (aiResponse && aiResponse.replyText) {
+          const aiMsg = DB.addMessage({
+            conversationId: currentConvId,
+            senderType: 'AI',
+            senderName: 'AI Clinical Assistant',
+            messageText: aiResponse.replyText
+          });
+
+          const freshConv = DB.getConversationById(currentConvId);
+
+          // Push AI reply to visitor
+          broadcastToConversation(currentConvId, {
+            event: 'new_message',
+            message: aiMsg,
+            appointmentCreated: aiResponse.appointmentCreated || null
+          });
+
+          // Push AI reply to admin inbox
+          broadcastToAdmin({
+            event: 'ai_reply_sent',
+            conversationId: currentConvId,
+            conversation: freshConv,
+            message: aiMsg,
+            appointmentCreated: aiResponse.appointmentCreated || null
+          });
+        }
+      } catch (aiErr) {
+        console.error('[AI Assistant Error]:', aiErr);
+      }
+    }, 850);
+
   } catch (err) {
     console.error('[API /api/chat/send error]:', err);
-    res.status(500).json({ error: 'Failed to send message' });
+    res.status(500).json({ error: 'Failed to process message' });
   }
 });
 
-// 4. Update visitor details optionally
-app.post('/api/chat/profile', (req, res) => {
+// 4. Dedicated Appointment Booking Endpoint
+app.post('/api/appointments/book', (req, res) => {
   try {
-    const { conversationId, visitorToken, visitorName, visitorPhone } = req.body;
-    if (!conversationId || !visitorToken) {
-      return res.status(400).json({ error: 'conversationId and visitorToken required' });
-    }
-
-    const conv = DB.getConversationByToken(conversationId, visitorToken);
-    if (!conv) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    const updated = DB.updateVisitorDetails(conversationId, {
-      name: visitorName !== undefined ? visitorName.trim() : undefined,
-      phone: visitorPhone !== undefined ? visitorPhone.trim() : undefined
-    });
-
-    broadcastToAdmin({
-      event: 'visitor_profile_updated',
+    const {
+      visitorToken,
       conversationId,
-      conversation: updated
+      patientName,
+      patientAge,
+      phone,
+      appointmentDate,
+      preferredTime,
+      reasonForVisit
+    } = req.body;
+
+    if (!visitorToken) {
+      return res.status(401).json({ error: 'Visitor session token required' });
+    }
+
+    const visitor = DB.getVisitorByToken(visitorToken);
+    if (!visitor) {
+      return res.status(401).json({ error: 'Invalid visitor session token' });
+    }
+
+    if (!patientName || !phone || !appointmentDate || !preferredTime) {
+      return res.status(400).json({ error: 'Patient name, phone, appointment date, and preferred time are required.' });
+    }
+
+    const appt = DB.createAppointment({
+      visitorId: visitor.id,
+      conversationId: conversationId || null,
+      patientName,
+      patientAge: patientAge ? parseInt(patientAge, 10) : visitor.age,
+      phone,
+      appointmentDate,
+      preferredTime,
+      reasonForVisit: reasonForVisit || '',
+      status: 'pending'
     });
 
-    res.json({ success: true, conversation: updated });
+    // Notify admin
+    broadcastToAdmin({
+      event: 'new_appointment_booked',
+      appointment: appt,
+      visitor
+    });
+
+    if (conversationId) {
+      broadcastToConversation(conversationId, {
+        event: 'appointment_confirmed',
+        appointment: appt
+      });
+    }
+
+    res.json({ success: true, appointment: appt });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to update profile' });
+    console.error('[API /api/appointments/book error]:', err);
+    res.status(400).json({ error: err.message || 'Appointment booking failed' });
   }
 });
 
@@ -382,7 +485,6 @@ app.post('/api/admin/login', (req, res) => {
       }
     });
   } catch (err) {
-    console.error('[Admin Login Error]:', err);
     res.status(500).json({ error: 'Authentication failed' });
   }
 });
@@ -394,7 +496,7 @@ app.get('/api/admin/me', requireAdmin, (req, res) => {
   res.json({ success: true, admin });
 });
 
-// List all enquiries with search, filters, and unread counts
+// List all conversations
 app.get('/api/admin/conversations', requireAdmin, (req, res) => {
   try {
     const { status, search } = req.query;
@@ -406,7 +508,7 @@ app.get('/api/admin/conversations', requireAdmin, (req, res) => {
   }
 });
 
-// Get single conversation details and messages
+// Get single conversation details, messages, and appointments
 app.get('/api/admin/conversations/:id', requireAdmin, (req, res) => {
   try {
     const conv = DB.getConversationById(req.params.id);
@@ -414,24 +516,22 @@ app.get('/api/admin/conversations/:id', requireAdmin, (req, res) => {
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
-    // Mark visitor messages as read by admin
     DB.markConversationRead(conv.id, 'admin');
 
     const messages = DB.getMessages(conv.id);
+    const appointments = DB.getAppointmentsForConversation(conv.id);
 
-    // Inform visitor that their messages were read
     broadcastToConversation(conv.id, {
       event: 'messages_read_by_admin',
       conversationId: conv.id
     });
 
-    // Notify other admin sessions
     broadcastToAdmin({
       event: 'conversation_marked_read',
       conversationId: conv.id
     });
 
-    res.json({ success: true, conversation: conv, messages });
+    res.json({ success: true, conversation: conv, messages, appointments });
   } catch (err) {
     res.status(500).json({ error: 'Failed to load conversation' });
   }
@@ -462,13 +562,11 @@ app.post('/api/admin/conversations/:id/reply', requireAdmin, (req, res) => {
 
     const updatedConv = DB.getConversationById(conversationId);
 
-    // Push to visitor real-time
     broadcastToConversation(conversationId, {
       event: 'new_message',
       message
     });
 
-    // Push to admin inbox real-time
     broadcastToAdmin({
       event: 'admin_reply_sent',
       conversationId,
@@ -478,12 +576,11 @@ app.post('/api/admin/conversations/:id/reply', requireAdmin, (req, res) => {
 
     res.json({ success: true, message, conversation: updatedConv });
   } catch (err) {
-    console.error('[Admin Reply Error]:', err);
     res.status(500).json({ error: 'Failed to send admin reply' });
   }
 });
 
-// Update conversation status (new, open, resolved)
+// Update conversation status
 app.patch('/api/admin/conversations/:id/status', requireAdmin, (req, res) => {
   try {
     const { status } = req.body;
@@ -513,25 +610,42 @@ app.patch('/api/admin/conversations/:id/notes', requireAdmin, (req, res) => {
   }
 });
 
-// Update visitor details from admin panel
-app.patch('/api/admin/conversations/:id/visitor', requireAdmin, (req, res) => {
+// List all appointments for Admin
+app.get('/api/admin/appointments', requireAdmin, (req, res) => {
   try {
-    const { name, phone } = req.body;
-    const updated = DB.updateVisitorDetails(req.params.id, { name, phone });
-
-    broadcastToAdmin({
-      event: 'visitor_profile_updated',
-      conversationId: req.params.id,
-      conversation: updated
-    });
-
-    res.json({ success: true, conversation: updated });
+    const { status } = req.query;
+    const appointments = DB.listAppointments({ status });
+    res.json({ success: true, appointments });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to update visitor info' });
+    res.status(500).json({ error: 'Failed to fetch appointments' });
   }
 });
 
-// System Stats
+// Update appointment status
+app.patch('/api/admin/appointments/:id/status', requireAdmin, (req, res) => {
+  try {
+    const { status } = req.body;
+    const updated = DB.updateAppointmentStatus(req.params.id, status);
+
+    broadcastToAdmin({
+      event: 'appointment_status_changed',
+      appointment: updated
+    });
+
+    if (updated.conversation_id) {
+      broadcastToConversation(updated.conversation_id, {
+        event: 'appointment_status_changed',
+        appointment: updated
+      });
+    }
+
+    res.json({ success: true, appointment: updated });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Admin stats
 app.get('/api/admin/stats', requireAdmin, (req, res) => {
   try {
     const stats = DB.getStats();
@@ -544,15 +658,12 @@ app.get('/api/admin/stats', requireAdmin, (req, res) => {
 // ============================================================================
 // STATIC FILES & SPA ROUTES
 // ============================================================================
-// Explicit admin route
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
-// Serve static project files
 app.use(express.static(__dirname));
 
-// Fallback to index.html for root
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });

@@ -176,8 +176,24 @@
 
           if (payload.event === 'new_enquiry_message') {
             handleIncomingEnquiry(payload);
+          } else if (payload.event === 'ai_reply_sent') {
+            if (state.activeConversationId === payload.conversationId) {
+              appendChatMessage(payload.message);
+            }
+            fetchConversations();
           } else if (payload.event === 'admin_reply_sent') {
             handleAdminReplySent(payload);
+          } else if (payload.event === 'new_appointment_booked') {
+            playEnquiryChime();
+            fetchConversations();
+            if (state.activeConversationId === payload.appointment.conversation_id) {
+              selectConversation(state.activeConversationId);
+            }
+          } else if (payload.event === 'appointment_status_changed') {
+            fetchConversations();
+            if (state.activeConversationId) {
+              selectConversation(state.activeConversationId);
+            }
           } else if (payload.event === 'typing') {
             if (payload.conversationId === state.activeConversationId) {
               const typingIndicator = document.getElementById('chatAdminTyping');
@@ -271,6 +287,13 @@
   // =========================================================================
   async function fetchConversations() {
     try {
+      if (state.filter === 'appointments') {
+        const res = await apiFetch('/api/admin/appointments');
+        const data = await res.json();
+        renderAppointmentsList(data.appointments || []);
+        return;
+      }
+
       const url = `/api/admin/conversations?status=${encodeURIComponent(state.filter)}&search=${encodeURIComponent(state.searchQuery)}`;
       const res = await apiFetch(url);
       if (!res.ok) throw new Error('Fetch failed');
@@ -279,11 +302,54 @@
       state.conversations = data.conversations || [];
       if (data.stats) {
         document.getElementById('countUnread').textContent = data.stats.unread || 0;
+        const apptCountEl = document.getElementById('countAppointments');
+        if (apptCountEl) apptCountEl.textContent = data.stats.appointmentsPending || 0;
       }
       renderConversationList();
     } catch (err) {
       console.error('[Admin] Failed to load conversations:', err);
     }
+  }
+
+  function renderAppointmentsList(appointments) {
+    const listEl = document.getElementById('inboxList');
+    if (!listEl) return;
+
+    if (appointments.length === 0) {
+      listEl.innerHTML = `
+        <div class="inbox-empty">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>No booked appointments recorded yet</span>
+        </div>
+      `;
+      return;
+    }
+
+    listEl.innerHTML = '';
+    appointments.forEach(appt => {
+      const item = document.createElement('div');
+      item.className = 'conv-item';
+      item.innerHTML = `
+        <div class="conv-item-avatar" style="border-color:var(--green);color:var(--green);">📅</div>
+        <div class="conv-item-content">
+          <div class="conv-item-top">
+            <span class="conv-item-name">${escapeHTML(appt.patient_name)} (${appt.patient_age || '?'}y)</span>
+            <span class="status-pill status-${appt.status === 'confirmed' ? 'resolved' : (appt.status === 'pending' ? 'open' : 'new')}">${appt.status.toUpperCase()}</span>
+          </div>
+          <div class="conv-item-bottom">
+            <span class="conv-item-preview" style="color:var(--txt-main);font-weight:600;">${appt.appointment_date} at ${appt.preferred_time}</span>
+          </div>
+          <div style="font-size:11px;color:var(--txt-sub);margin-top:2px;">${escapeHTML(appt.reason_for_visit || 'Cardiology Consultation')} · ${escapeHTML(appt.phone)}</div>
+        </div>
+      `;
+
+      item.addEventListener('click', () => {
+        if (appt.conversation_id) {
+          selectConversation(appt.conversation_id);
+        }
+      });
+      listEl.appendChild(item);
+    });
   }
 
   function renderConversationList() {
@@ -434,16 +500,26 @@
     const empty = stream.querySelector('.inbox-empty');
     if (empty) empty.remove();
 
-    const isVisitor = msg.sender_type === 'visitor';
+    const senderType = msg.sender_type;
+    const isVisitor = senderType === 'visitor';
+    const isAI = senderType === 'AI';
+
     const wrap = document.createElement('div');
-    wrap.className = `admin-bubble-wrap ${isVisitor ? 'is-visitor' : 'is-admin'}`;
+    wrap.className = `admin-bubble-wrap ${isVisitor ? 'is-visitor' : (isAI ? 'is-ai' : 'is-admin')}`;
     wrap.id = `admin-msg-${msg.id}`;
 
-    const senderName = isVisitor
-      ? (state.activeConversation && state.activeConversation.visitor_name ? escapeHTML(state.activeConversation.visitor_name) : 'Visitor')
-      : 'You (Dr. John Smith)';
+    let senderName = '';
+    if (isVisitor) {
+      senderName = state.activeConversation && state.activeConversation.visitor_name
+        ? escapeHTML(state.activeConversation.visitor_name)
+        : 'Visitor';
+    } else if (isAI) {
+      senderName = '<span class="ai-badge-sm">AI Clinical Assistant</span> Dr. Smith Practice';
+    } else {
+      senderName = 'You (Dr. John Smith)';
+    }
 
-    const tick = !isVisitor
+    const tick = !isVisitor && !isAI
       ? `<span class="admin-tick">${msg.delivery_status === 'read' ? '✓✓' : '✓'}</span>`
       : '';
 
@@ -517,9 +593,57 @@
     document.getElementById('detAvatar').textContent = initials;
     document.getElementById('detName').textContent = displayName;
 
+    const ageEl = document.getElementById('detAge');
+    if (ageEl) {
+      ageEl.textContent = conv.visitor_age ? `Patient Age: ${conv.visitor_age} years` : 'Age: Not recorded';
+    }
+
     const badge = document.getElementById('detStatusBadge');
     badge.className = `status-pill status-${conv.status || 'new'}`;
     badge.textContent = (conv.status || 'new').toUpperCase();
+
+    // Render appointments
+    const apptsList = document.getElementById('detApptsList');
+    if (apptsList) {
+      if (conv.appointments && conv.appointments.length > 0) {
+        apptsList.innerHTML = '';
+        conv.appointments.forEach(appt => {
+          const item = document.createElement('div');
+          item.className = 'det-appt-item';
+          item.innerHTML = `
+            <div class="det-appt-header">
+              <span class="det-appt-date">📅 ${appt.appointment_date} · ${appt.preferred_time}</span>
+              <select class="det-appt-status-select" data-id="${appt.id}">
+                <option value="pending" ${appt.status === 'pending' ? 'selected' : ''}>Pending</option>
+                <option value="confirmed" ${appt.status === 'confirmed' ? 'selected' : ''}>Confirmed</option>
+                <option value="cancelled" ${appt.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                <option value="completed" ${appt.status === 'completed' ? 'selected' : ''}>Completed</option>
+              </select>
+            </div>
+            <div style="font-size:11px;color:var(--txt-sub);">Reason: ${escapeHTML(appt.reason_for_visit || 'Cardiology Consultation')}</div>
+            <div style="font-size:10.5px;color:var(--txt-muted);">Contact: ${escapeHTML(appt.phone)}</div>
+          `;
+
+          const selectEl = item.querySelector('.det-appt-status-select');
+          selectEl.addEventListener('change', async (e) => {
+            const newStatus = e.target.value;
+            try {
+              await apiFetch(`/api/admin/appointments/${appt.id}/status`, {
+                method: 'PATCH',
+                body: { status: newStatus }
+              });
+              appt.status = newStatus;
+              fetchConversations();
+            } catch (err) {
+              alert('Failed to update appointment status');
+            }
+          });
+          apptsList.appendChild(item);
+        });
+      } else {
+        apptsList.innerHTML = '<span class="det-no-appts">No appointment requests logged yet.</span>';
+      }
+    }
 
     // Call button
     const callBtn = document.getElementById('detCallBtn');

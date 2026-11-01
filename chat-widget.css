@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════
-   DR. JOHN SMITH · REAL-TIME VISITOR ENQUIRY CHAT WIDGET
+   DR. JOHN SMITH · REAL-TIME VISITOR ENQUIRY & AI CHAT
    Medical Luxury Glassmorphism · Mobile-First · Responsive
    ══════════════════════════════════════════════════════════ */
 
@@ -12,7 +12,7 @@
   width: 58px;
   height: 58px;
   border-radius: 50%;
-  background: rgba(11, 29, 42, 0.82);
+  background: rgba(11, 29, 42, 0.85);
   border: 1px solid rgba(114, 214, 232, 0.38);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(114, 214, 232, 0.22);
   backdrop-filter: blur(16px) saturate(180%);
@@ -28,7 +28,7 @@
 
 .doc-chat-trigger:hover {
   transform: scale(1.08) translateY(-2px);
-  background: rgba(14, 38, 56, 0.92);
+  background: rgba(14, 38, 56, 0.95);
   border-color: rgba(114, 214, 232, 0.65);
   box-shadow: 0 12px 38px rgba(0, 0, 0, 0.6), 0 0 28px rgba(114, 214, 232, 0.38);
 }
@@ -96,16 +96,16 @@
   z-index: 850;
   bottom: 96px;
   right: 28px;
-  width: 390px;
+  width: 400px;
   max-width: calc(100vw - 32px);
-  height: 590px;
+  height: 610px;
   max-height: calc(100vh - 120px);
-  background: rgba(7, 19, 31, 0.88);
-  border: 1px solid rgba(114, 214, 232, 0.26);
+  background: rgba(7, 19, 31, 0.92);
+  border: 1px solid rgba(114, 214, 232, 0.28);
   border-radius: 22px;
   backdrop-filter: blur(28px) saturate(200%);
   -webkit-backdrop-filter: blur(28px) saturate(200%);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.65), 0 0 40px rgba(114, 214, 232, 0.08);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7), 0 0 40px rgba(114, 214, 232, 0.1);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -127,7 +127,7 @@
 /* ── CHAT HEADER ────────────────────────────────────────── */
 .doc-chat-header {
   padding: 16px 18px;
-  background: rgba(11, 29, 42, 0.8);
+  background: rgba(11, 29, 42, 0.85);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
@@ -245,10 +245,170 @@
   flex-shrink: 0;
 }
 
-/* ── VISITOR CONTACT STRIP (Optional Details Intake) ────── */
+/* ══════════════════════════════════════════════════════════
+   1. VISITOR REGISTRATION FORM VIEW
+   ══════════════════════════════════════════════════════════ */
+.doc-chat-register-view {
+  flex: 1;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow-y: auto;
+  gap: 16px;
+}
+
+.reg-card-header {
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.reg-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: rgba(114, 214, 232, 0.12);
+  border: 1px solid rgba(114, 214, 232, 0.3);
+  border-radius: 50px;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #72D6E8;
+  margin-bottom: 10px;
+}
+
+.reg-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 24px;
+  font-weight: 500;
+  color: #F5F8FA;
+  margin-bottom: 4px;
+  letter-spacing: -0.01em;
+}
+
+.reg-desc {
+  font-size: 12.5px;
+  color: #A8B7C2;
+  line-height: 1.5;
+  max-width: 310px;
+  margin: 0 auto;
+}
+
+.reg-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.reg-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.reg-label {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #72D6E8;
+  display: flex;
+  justify-content: space-between;
+}
+
+.reg-label-opt {
+  color: #5A6F82;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.reg-input {
+  padding: 11px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: #F5F8FA;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.reg-input:focus {
+  border-color: #72D6E8;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.reg-input::placeholder {
+  color: #5A6F82;
+}
+
+.reg-error {
+  padding: 8px 12px;
+  background: rgba(255, 80, 80, 0.12);
+  border: 1px solid rgba(255, 80, 80, 0.3);
+  border-radius: 8px;
+  color: #ff9494;
+  font-size: 11.5px;
+  display: none;
+  text-align: center;
+}
+
+.reg-submit-btn {
+  margin-top: 6px;
+  padding: 14px;
+  background: #72D6E8;
+  color: #07131F;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s;
+}
+
+.reg-submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(114, 214, 232, 0.35);
+}
+
+.reg-privacy-note {
+  font-size: 10.5px;
+  color: #5A6F82;
+  text-align: center;
+  line-height: 1.45;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   2. CONVERSATION VIEW (Active after registration)
+   ══════════════════════════════════════════════════════════ */
+.doc-chat-active-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Visitor Profile Tag Strip */
 .doc-chat-profile-strip {
   padding: 8px 14px;
-  background: rgba(11, 29, 42, 0.5);
+  background: rgba(11, 29, 42, 0.55);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   font-size: 11.5px;
   display: flex;
@@ -291,72 +451,10 @@
   background: rgba(114, 214, 232, 0.12);
 }
 
-/* Drawer for editing details */
-.doc-chat-profile-drawer {
-  padding: 12px 16px;
-  background: rgba(8, 22, 34, 0.95);
-  border-bottom: 1px solid rgba(114, 214, 232, 0.2);
-  display: none;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.doc-chat-profile-drawer.is-open {
-  display: flex;
-}
-
-.doc-chat-drawer-inputs {
-  display: flex;
-  gap: 8px;
-}
-
-.doc-chat-input-sm {
-  flex: 1;
-  padding: 8px 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  color: #F5F8FA;
-  font-family: inherit;
-  font-size: 12px;
-  outline: none;
-}
-
-.doc-chat-input-sm:focus {
-  border-color: #72D6E8;
-}
-
-.doc-chat-drawer-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
-.doc-chat-btn-xs {
-  padding: 5px 12px;
-  border-radius: 6px;
-  font-family: 'Space Grotesk', system-ui, sans-serif;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.doc-chat-btn-save {
-  background: #72D6E8;
-  color: #07131F;
-  border: none;
-}
-
-.doc-chat-btn-cancel {
-  background: transparent;
-  color: #A8B7C2;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* ── CONVERSATION STREAM ────────────────────────────────── */
+/* Messages Stream */
 .doc-chat-messages {
   flex: 1;
-  padding: 18px 16px;
+  padding: 16px 14px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -375,7 +473,7 @@
 /* Welcome Card */
 .doc-chat-welcome {
   text-align: center;
-  padding: 16px 12px;
+  padding: 14px 12px;
   background: rgba(11, 29, 42, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 14px;
@@ -394,7 +492,7 @@
   font-size: 12px;
   color: #A8B7C2;
   line-height: 1.5;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 /* Quick prompt chips */
@@ -406,7 +504,7 @@
 }
 
 .doc-chat-chip {
-  padding: 6px 11px;
+  padding: 5px 11px;
   background: rgba(114, 214, 232, 0.08);
   border: 1px solid rgba(114, 214, 232, 0.25);
   border-radius: 50px;
@@ -423,24 +521,12 @@
   transform: translateY(-1px);
 }
 
-/* Date separator */
-.doc-chat-date-divider {
-  align-self: center;
-  padding: 3px 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 50px;
-  font-size: 10px;
-  font-family: 'Space Grotesk', system-ui, sans-serif;
-  color: #A8B7C2;
-  margin: 6px 0;
-}
-
-/* ── MESSAGE BUBBLES ────────────────────────────────────── */
+/* ── MESSAGE BUBBLE VARIANTS ────────────────────────────── */
 .doc-chat-bubble-wrap {
   display: flex;
   flex-direction: column;
-  max-width: 82%;
-  animation: docMsgIn 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  max-width: 84%;
+  animation: docMsgIn 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes docMsgIn {
@@ -455,35 +541,66 @@
 }
 
 .doc-chat-bubble-wrap.is-visitor .doc-chat-bubble {
-  background: linear-gradient(135deg, rgba(14, 48, 70, 0.88), rgba(114, 214, 232, 0.24));
+  background: linear-gradient(135deg, rgba(14, 48, 70, 0.9), rgba(114, 214, 232, 0.26));
   border: 1px solid rgba(114, 214, 232, 0.45);
   color: #F5F8FA;
   border-radius: 16px 16px 3px 16px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
-/* Admin / Doctor message (Received) */
+/* AI Assistant message */
+.doc-chat-bubble-wrap.is-ai {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.doc-chat-bubble-wrap.is-ai .doc-chat-bubble {
+  background: rgba(9, 26, 38, 0.92);
+  border: 1px solid rgba(114, 214, 232, 0.35);
+  color: #F5F8FA;
+  border-radius: 16px 16px 16px 3px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35), 0 0 16px rgba(114, 214, 232, 0.08);
+}
+
+/* Human Admin message */
 .doc-chat-bubble-wrap.is-admin {
   align-self: flex-start;
   align-items: flex-start;
 }
 
 .doc-chat-bubble-wrap.is-admin .doc-chat-bubble {
-  background: rgba(11, 29, 42, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(11, 29, 42, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   color: #F5F8FA;
   border-radius: 16px 16px 16px 3px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
 .doc-chat-bubble-sender {
-  font-size: 10.5px;
-  font-weight: 600;
-  color: #72D6E8;
+  font-size: 10px;
+  font-weight: 700;
   margin-bottom: 3px;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.doc-chat-bubble-sender.sender-ai {
+  color: #72D6E8;
+}
+
+.doc-chat-bubble-sender.sender-admin {
+  color: #25D366;
+}
+
+.doc-chat-ai-pill {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(114, 214, 232, 0.15);
+  font-size: 9px;
+  text-transform: uppercase;
 }
 
 .doc-chat-bubble {
@@ -508,6 +625,65 @@
 .doc-chat-ticks {
   color: #72D6E8;
   font-size: 11px;
+}
+
+/* ── EMBEDDED APPOINTMENT CARD (Inside Chat) ─────────────── */
+.doc-chat-appt-card {
+  margin-top: 8px;
+  padding: 12px 14px;
+  background: rgba(114, 214, 232, 0.1);
+  border: 1px solid rgba(114, 214, 232, 0.35);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.appt-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.appt-card-badge {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #72D6E8;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.appt-card-status {
+  padding: 2px 7px;
+  border-radius: 50px;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.appt-status-pending {
+  background: rgba(255, 184, 0, 0.16);
+  border: 1px solid rgba(255, 184, 0, 0.4);
+  color: #FFB800;
+}
+.appt-status-confirmed {
+  background: rgba(37, 211, 102, 0.16);
+  border: 1px solid rgba(37, 211, 102, 0.4);
+  color: #25D366;
+}
+
+.appt-card-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: #F5F8FA;
+}
+.appt-card-row svg {
+  color: #72D6E8;
+  flex-shrink: 0;
 }
 
 /* ── TYPING INDICATOR ───────────────────────────────────── */
@@ -614,7 +790,6 @@
 /* ── MOBILE BREAKPOINT ──────────────────────────────────── */
 @media (max-width: 600px) {
   .doc-chat-trigger {
-    /* Position above the sticky bottom appointment bar */
     bottom: calc(var(--bar-h, 66px) + 16px);
     right: 16px;
     width: 52px;
