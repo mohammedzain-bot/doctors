@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#07131F" />
+  <title>Clinic Inbox · Dr. John Smith Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="admin.css" />
+</head>
+<body>
+
+  <!-- Full-Page Cinematic Background -->
+  <div class="admin-bg-layer" aria-hidden="true"></div>
+  <div class="admin-veil-layer" aria-hidden="true"></div>
+
+  <!-- =========================================================================
+       1. AUTHENTICATION MODAL (Shown when not logged in)
+       ========================================================================= -->
+  <div class="admin-auth-overlay" id="adminAuthOverlay">
+    <div class="admin-auth-card">
+      <div class="admin-auth-brand">
+        <span class="auth-brand-logo">JS</span><span class="auth-brand-dot"></span>
+      </div>
+      <h1 class="auth-title">Dr. John Smith</h1>
+      <p class="auth-subtitle">Confidential Patient Enquiry &amp; Messaging Portal</p>
+
+      <form id="adminLoginForm" class="admin-login-form">
+        <div class="auth-field">
+          <label for="adminEmail">Staff Email</label>
+          <input type="email" id="adminEmail" required placeholder="admin@doctor.com" value="admin@doctor.com" autocomplete="username" />
+        </div>
+        <div class="auth-field">
+          <label for="adminPassword">Password</label>
+          <input type="password" id="adminPassword" required placeholder="••••••••••••" value="DoctorCare@2026" autocomplete="current-password" />
+        </div>
+        <div class="auth-error" id="authError" style="display:none;"></div>
+        <button type="submit" class="auth-submit-btn" id="authSubmitBtn">
+          <span>Sign In to Inbox</span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </form>
+
+      <div class="auth-footer-notice">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>Authorized Personnel Only · 256-bit Encrypted Session</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       2. THREE-PANE WHATSAPP-STYLE MESSAGING INTERFACE
+       ========================================================================= -->
+  <div class="admin-app" id="adminApp" style="display:none;">
+
+    <!-- ── LEFT SIDEBAR: INBOX CONVERSATIONS ──────────────────────────────── -->
+    <aside class="inbox-sidebar" id="inboxSidebar">
+      <!-- Sidebar Header -->
+      <div class="inbox-header">
+        <div class="inbox-brand">
+          <div class="inbox-avatar">JS</div>
+          <div class="inbox-brand-info">
+            <span class="inbox-brand-name">Dr. John Smith</span>
+            <span class="inbox-brand-role">Clinic Admin <span class="admin-live-dot" title="Real-time connected"></span></span>
+          </div>
+        </div>
+        <div class="inbox-header-actions">
+          <button class="inbox-action-btn" id="refreshBtn" title="Refresh Enquiries">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          </button>
+          <button class="inbox-action-btn" id="adminLogoutBtn" title="Log Out">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Search Bar -->
+      <div class="inbox-search-wrap">
+        <div class="inbox-search-bar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" id="inboxSearchInput" placeholder="Search visitors, phone, messages..." autocomplete="off" />
+          <button class="search-clear-btn" id="searchClearBtn" style="display:none;">&times;</button>
+        </div>
+      </div>
+
+      <!-- Filter Tabs -->
+      <div class="inbox-filters">
+        <button class="filter-tab active" data-filter="all">All</button>
+        <button class="filter-tab" data-filter="unread">Unread <span class="filter-count" id="countUnread">0</span></button>
+        <button class="filter-tab" data-filter="open">Open</button>
+        <button class="filter-tab" data-filter="resolved">Resolved</button>
+      </div>
+
+      <!-- Conversation List -->
+      <div class="inbox-list" id="inboxList">
+        <div class="inbox-loading">
+          <div class="spinner"></div>
+          <span>Loading patient enquiries...</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── CENTRAL PANEL: ACTIVE CONVERSATION ────────────────────────────── -->
+    <main class="chat-main" id="chatMain">
+      <!-- Empty Placeholder when no conversation is selected -->
+      <div class="chat-empty-state" id="chatEmptyState">
+        <div class="empty-icon-wrap">
+          <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        </div>
+        <h2 class="empty-title">Select an Enquiry to Respond</h2>
+        <p class="empty-desc">Choose a visitor conversation from the left to view their medical enquiry, patient history, and respond in real time.</p>
+      </div>
+
+      <!-- Active Chat Area -->
+      <div class="chat-active-view" id="chatActiveView" style="display:none;">
+        <!-- Chat Header -->
+        <header class="active-chat-header">
+          <div class="ach-left">
+            <button class="ach-back-btn" id="achBackBtn" aria-label="Back to conversations">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            </button>
+            <div class="ach-avatar" id="achAvatar">V</div>
+            <div class="ach-info">
+              <div class="ach-name-row">
+                <h2 class="ach-name" id="achName">Visitor Name</h2>
+                <span class="status-pill status-new" id="achStatusPill">NEW</span>
+              </div>
+              <div class="ach-meta" id="achMeta">
+                <span id="achPhone">+91 XXXXX XXXXX</span>
+                <span class="ach-dot-sep">·</span>
+                <span id="achTime">Started today</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="ach-actions">
+            <button class="ach-action-btn" id="toggleStatusBtn" title="Change Status">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span id="toggleStatusLabel">Mark Resolved</span>
+            </button>
+            <button class="ach-action-btn" id="toggleDetailsBtn" title="Toggle Details Panel">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            </button>
+          </div>
+        </header>
+
+        <!-- Message Bubbles Stream -->
+        <div class="chat-stream" id="chatStream">
+          <!-- Messages inserted dynamically -->
+        </div>
+
+        <!-- Typing Indicator -->
+        <div class="chat-admin-typing" id="chatAdminTyping" style="display:none;">
+          <span>Visitor is typing</span>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+        </div>
+
+        <!-- Quick Response Templates Strip -->
+        <div class="quick-templates-strip" id="quickTemplates">
+          <button class="qt-chip" data-text="Thank you for reaching out. What date and preferred time works best for your cardiac consultation?">📅 Consultation Slot</button>
+          <button class="qt-chip" data-text="Dr. John Smith's consultation hours are Monday through Friday, 10:00 AM – 6:00 PM, and Saturdays, 10:00 AM – 2:00 PM.">🕒 Consultation Hours</button>
+          <button class="qt-chip" data-text="Our clinic is located at Apollo Hospitals, 21 Greams Lane, Chennai — 600006. Valet parking is available.">📍 Clinic Address</button>
+          <button class="qt-chip" data-text="Please bring your previous ECG, 2D Echo, or relevant cardiology reports with you for the appointment.">📋 Medical Records</button>
+        </div>
+
+        <!-- Active Composer -->
+        <footer class="active-chat-composer">
+          <textarea
+            id="adminMessageInput"
+            class="admin-composer-textarea"
+            placeholder="Type your reply to patient... (Press Enter to send, Shift+Enter for newline)"
+            rows="1"
+          ></textarea>
+          <button class="admin-send-btn" id="adminSendBtn" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </footer>
+      </div>
+    </main>
+
+    <!-- ── RIGHT SIDEBAR: VISITOR & ENQUIRY DETAILS ──────────────────────── -->
+    <aside class="details-sidebar" id="detailsSidebar">
+      <div class="details-header">
+        <h3 class="details-title">Enquiry Details</h3>
+        <button class="details-close-btn" id="detailsCloseBtn">&times;</button>
+      </div>
+
+      <div class="details-body" id="detailsBody">
+        <!-- Contact Summary -->
+        <div class="details-section">
+          <div class="details-avatar" id="detAvatar">JS</div>
+          <h4 class="det-name" id="detName">Anonymous Visitor</h4>
+          <span class="status-pill status-new" id="detStatusBadge">NEW</span>
+        </div>
+
+        <!-- Direct Contact Actions -->
+        <div class="details-quick-actions" id="detQuickActions">
+          <a href="#" class="det-btn det-btn-call" id="detCallBtn" target="_blank">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.4 1.13 2 2 0 012 .18h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16z"/></svg>
+            <span>Call</span>
+          </a>
+          <a href="#" class="det-btn det-btn-wa" id="detWhatsAppBtn" target="_blank" rel="noopener noreferrer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.889-9.885 9.889m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+            </svg>
+            <span>WhatsApp</span>
+          </a>
+        </div>
+
+        <!-- Editable Details -->
+        <div class="details-section">
+          <label class="det-label">Edit Visitor Contact</label>
+          <div class="det-field">
+            <span class="det-field-title">Name</span>
+            <input type="text" id="detInputName" class="det-input" placeholder="e.g. Rahul Sharma" />
+          </div>
+          <div class="det-field">
+            <span class="det-field-title">Phone</span>
+            <input type="tel" id="detInputPhone" class="det-input" placeholder="e.g. +91 98765 43210" />
+          </div>
+          <button class="det-save-btn" id="detSaveContactBtn">Update Contact Info</button>
+        </div>
+
+        <!-- Metadata -->
+        <div class="details-section">
+          <label class="det-label">Conversation Timeline</label>
+          <div class="det-meta-row">
+            <span>Enquiry ID</span>
+            <code id="detConvId">conv_...</code>
+          </div>
+          <div class="det-meta-row">
+            <span>First Message</span>
+            <span id="detCreatedTime">—</span>
+          </div>
+          <div class="det-meta-row">
+            <span>Last Activity</span>
+            <span id="detLastTime">—</span>
+          </div>
+          <div class="det-meta-row">
+            <span>Total Messages</span>
+            <span id="detTotalMsg">0</span>
+          </div>
+        </div>
+
+        <!-- Internal Notes -->
+        <div class="details-section">
+          <label class="det-label">Private Internal Notes</label>
+          <p class="det-hint">Visible only to clinic staff. Use for clinical notes, follow-up flags, or preferred appointment dates.</p>
+          <textarea id="detAdminNotes" class="det-notes-textarea" placeholder="Add clinical note or follow-up note here..." rows="4"></textarea>
+          <button class="det-save-btn" id="detSaveNotesBtn">Save Note</button>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>

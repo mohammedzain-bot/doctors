@@ -67,10 +67,57 @@ window.addEventListener('DOMContentLoaded', () => {
   }, 180);
 });
 
+/* ── BOOKING MODAL (WhatsApp & Call) ──────────────────────── */
+const bookingModal    = document.getElementById('booking-modal');
+const modalClose      = document.getElementById('modal-close');
+const bookingTriggers = document.querySelectorAll('.trigger-booking, a[href="#booking-modal"]');
+
+function openBookingModal(e) {
+  if (e) e.preventDefault();
+  if (menuOpen) closeMenu();
+  if (bookingModal) {
+    bookingModal.classList.add('open');
+    bookingModal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeBookingModal() {
+  if (bookingModal) {
+    bookingModal.classList.remove('open');
+    bookingModal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+}
+
+bookingTriggers.forEach(btn => {
+  btn.addEventListener('click', openBookingModal);
+});
+
+if (modalClose) {
+  modalClose.addEventListener('click', closeBookingModal);
+}
+
+if (bookingModal) {
+  bookingModal.addEventListener('click', e => {
+    if (e.target === bookingModal) closeBookingModal();
+  });
+}
+
+// Update escape key listener
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (menuOpen) closeMenu();
+    closeBookingModal();
+  }
+});
+
 /* ── SMOOTH ANCHORS ───────────────────────────────────────── */
 document.querySelectorAll('a[href^="#"]').forEach(a => {
   a.addEventListener('click', e => {
-    const t = document.querySelector(a.getAttribute('href'));
+    const href = a.getAttribute('href');
+    if (href === '#booking-modal' || a.classList.contains('trigger-booking')) return;
+    const t = document.querySelector(href);
     if (!t) return;
     e.preventDefault();
     window.scrollTo({ top: t.getBoundingClientRect().top + window.scrollY - header.offsetHeight, behavior: 'smooth' });
