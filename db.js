@@ -1,12 +1,30 @@
 'use strict';
 
 const path = require('node:path');
+const fs = require('node:fs');
+const os = require('node:os');
 const { DatabaseSync } = require('node:sqlite');
 const crypto = require('node:crypto');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
-const DB_PATH = path.join(__dirname, 'enquiries.db');
+const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_VERSION);
+let DB_PATH;
+if (isVercel) {
+  const tmpDbPath = path.join(os.tmpdir(), 'enquiries.db');
+  const seedDbPath = path.join(__dirname, 'enquiries.db');
+  if (!fs.existsSync(tmpDbPath) && fs.existsSync(seedDbPath)) {
+    try {
+      fs.copyFileSync(seedDbPath, tmpDbPath);
+      console.log('[Database] Seed database copied to tmpdir for Vercel execution:', tmpDbPath);
+    } catch (e) {
+      console.warn('[Database] Could not copy seed db to tmpdir:', e.message);
+    }
+  }
+  DB_PATH = tmpDbPath;
+} else {
+  DB_PATH = path.join(__dirname, 'enquiries.db');
+}
 const db = new DatabaseSync(DB_PATH);
 
 // Optional Supabase client initialization

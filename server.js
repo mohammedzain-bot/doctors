@@ -11,9 +11,16 @@ require('dotenv').config();
 const DB = require('./db.js');
 const { generateAIResponse, CLINIC_KNOWLEDGE } = require('./ai-engine.js');
 
+const isVercelEnv = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_VERSION || process.env.NOW_REGION);
+
 const app = express();
-const server = http.createServer(app);
-const wss = new WebSocketServer({ server, path: '/ws' });
+let server = null;
+let wss = null;
+
+if (!isVercelEnv) {
+  server = http.createServer(app);
+  wss = new WebSocketServer({ server, path: '/ws' });
+}
 
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'doctor_luxury_medical_secret_key_2026';
@@ -81,97 +88,99 @@ function broadcastToConversation(conversationId, payload) {
   }
 }
 
-wss.on('connection', (ws, req) => {
-  ws.isAlive = true;
-  ws.on('pong', () => { ws.isAlive = true; });
+if (wss) {
+  wss.on('connection', (ws, req) => {
+    ws.isAlive = true;
+    ws.on('pong', () => { ws.isAlive = true; });
 
-  ws.role = null;
-  ws.conversationId = null;
+    ws.role = null;
+    ws.conversationId = null;
 
-  ws.on('message', raw => {
-    try {
-      const data = JSON.parse(raw);
+    ws.on('message', raw => {
+      try {
+        const data = JSON.parse(raw);
 
-      // Admin socket registration
-      if (data.action === 'auth_admin') {
-        try {
-          const decoded = jwt.verify(data.token, JWT_SECRET);
-          ws.role = 'admin';
-          ws.admin = decoded;
-          adminSockets.add(ws);
-          ws.send(JSON.stringify({ event: 'auth_success', role: 'admin' }));
-        } catch (e) {
-          ws.send(JSON.stringify({ event: 'auth_error', message: 'Invalid admin token' }));
+        // Admin socket registration
+        if (data.action === 'auth_admin') {
+          try {
+            const decoded = jwt.verify(data.token, JWT_SECRET);
+            ws.role = 'admin';
+            ws.admin = decoded;
+            adminSockets.add(ws);
+            ws.send(JSON.stringify({ event: 'auth_success', role: 'admin' }));
+          } catch (e) {
+            ws.send(JSON.stringify({ event: 'auth_error', message: 'Invalid admin token' }));
+          }
+          return;
         }
-        return;
-      }
 
-      // Visitor socket registration
-      if (data.action === 'auth_visitor') {
-        const { conversationId, visitorToken } = data;
-        const visitor = DB.getVisitorByToken(visitorToken);
-        if (visitor) {
-          const conv = DB.getConversationForVisitor(visitor.id, conversationId);
-          if (conv) {
-            ws.role = 'visitor';
-            ws.conversationId = conv.id;
-            if (!conversationSockets.has(conv.id)) {
-              conversationSockets.set(conv.id, new Set());
+        // Visitor socket registration
+        if (data.action === 'auth_visitor') {
+          const { conversationId, visitorToken } = data;
+          const visitor = DB.getVisitorByToken(visitorToken);
+          if (visitor) {
+            const conv = DB.getConversationForVisitor(visitor.id, conversationId);
+            if (conv) {
+              ws.role = 'visitor';
+              ws.conversationId = conv.id;
+              if (!conversationSockets.has(conv.id)) {
+                conversationSockets.set(conv.id, new Set());
+              }
+              conversationSockets.get(conv.id).add(ws);
+              ws.send(JSON.stringify({ event: 'auth_success', role: 'visitor', conversationId: conv.id }));
+              return;
             }
-            conversationSockets.get(conv.id).add(ws);
-            ws.send(JSON.stringify({ event: 'auth_success', role: 'visitor', conversationId: conv.id }));
-            return;
+          }
+          ws.send(JSON.stringify({ event: 'auth_error', message: 'Invalid visitor credentials' }));
+          return;
+        }
+
+        // Typing indicator
+        if (data.action === 'typing') {
+          if (ws.role === 'visitor' && ws.conversationId) {
+            broadcastToAdmin({
+              event: 'typing',
+              conversationId: ws.conversationId,
+              senderType: 'visitor',
+              isTyping: !!data.isTyping
+            });
+          } else if (ws.role === 'admin' && data.conversationId) {
+            broadcastToConversation(data.conversationId, {
+              event: 'typing',
+              conversationId: data.conversationId,
+              senderType: 'admin',
+              isTyping: !!data.isTyping
+            });
           }
         }
-        ws.send(JSON.stringify({ event: 'auth_error', message: 'Invalid visitor credentials' }));
-        return;
+      } catch (err) {
+        console.error('[WebSocket] Message parsing error:', err.message);
       }
+    });
 
-      // Typing indicator
-      if (data.action === 'typing') {
-        if (ws.role === 'visitor' && ws.conversationId) {
-          broadcastToAdmin({
-            event: 'typing',
-            conversationId: ws.conversationId,
-            senderType: 'visitor',
-            isTyping: !!data.isTyping
-          });
-        } else if (ws.role === 'admin' && data.conversationId) {
-          broadcastToConversation(data.conversationId, {
-            event: 'typing',
-            conversationId: data.conversationId,
-            senderType: 'admin',
-            isTyping: !!data.isTyping
-          });
+    ws.on('close', () => {
+      if (ws.role === 'admin') {
+        adminSockets.delete(ws);
+      }
+      if (ws.conversationId && conversationSockets.has(ws.conversationId)) {
+        const set = conversationSockets.get(ws.conversationId);
+        set.delete(ws);
+        if (set.size === 0) {
+          conversationSockets.delete(ws.conversationId);
         }
       }
-    } catch (err) {
-      console.error('[WebSocket] Message parsing error:', err.message);
-    }
+    });
   });
 
-  ws.on('close', () => {
-    if (ws.role === 'admin') {
-      adminSockets.delete(ws);
-    }
-    if (ws.conversationId && conversationSockets.has(ws.conversationId)) {
-      const set = conversationSockets.get(ws.conversationId);
-      set.delete(ws);
-      if (set.size === 0) {
-        conversationSockets.delete(ws.conversationId);
-      }
-    }
-  });
-});
-
-const heartbeat = setInterval(() => {
-  wss.clients.forEach(ws => {
-    if (!ws.isAlive) return ws.terminate();
-    ws.isAlive = false;
-    ws.ping();
-  });
-}, 30000);
-wss.on('close', () => clearInterval(heartbeat));
+  const heartbeat = setInterval(() => {
+    wss.clients.forEach(ws => {
+      if (!ws.isAlive) return ws.terminate();
+      ws.isAlive = false;
+      ws.ping();
+    });
+  }, 30000);
+  wss.on('close', () => clearInterval(heartbeat));
+}
 
 // ============================================================================
 // REST API: VISITOR REGISTRATION & SESSION MANAGEMENT
@@ -668,8 +677,13 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-server.listen(PORT, () => {
-  console.log(`[Server] Dr. John Smith Medical Portal running at http://localhost:${PORT}`);
-  console.log(`[Server] Admin messaging inbox available at http://localhost:${PORT}/admin`);
-  console.log(`[Server] Default Admin Credentials: ${process.env.ADMIN_EMAIL || 'admin@doctor.com'} / ${process.env.ADMIN_PASSWORD || 'DoctorCare@2026'}`);
-});
+if (!isVercelEnv && (require.main === module || process.env.NODE_ENV === 'test')) {
+  server.listen(PORT, () => {
+    console.log(`[Server] Dr. John Smith Medical Portal running at http://localhost:${PORT}`);
+    console.log(`[Server] Admin messaging inbox available at http://localhost:${PORT}/admin`);
+    console.log(`[Server] Default Admin Credentials: ${process.env.ADMIN_EMAIL || 'admin@doctor.com'} / ${process.env.ADMIN_PASSWORD || 'DoctorCare@2026'}`);
+  });
+}
+
+module.exports = app;
+module.exports.server = server;

@@ -5,6 +5,7 @@ const { WebSocket } = require('ws');
 const DB = require('./db.js');
 
 process.env.PORT = '3046';
+process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test_secret_upgrade_2026';
 require('./server.js');
 

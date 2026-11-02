@@ -320,17 +320,39 @@
 
       ws.onclose = () => {
         state.wsConnected = false;
-        document.getElementById('docChatConnStatus').textContent = 'Connecting...';
+        const statusEl = document.getElementById('docChatConnStatus');
+        if (statusEl) statusEl.textContent = 'AI Online';
         clearTimeout(state.reconnectTimer);
-        state.reconnectTimer = setTimeout(connectWebSocket, 4000);
+        state.reconnectTimer = setTimeout(connectWebSocket, 10000);
+        startPollingFallback();
       };
 
       ws.onerror = () => {
-        ws.close();
+        state.wsConnected = false;
+        const statusEl = document.getElementById('docChatConnStatus');
+        if (statusEl) statusEl.textContent = 'AI Online';
+        startPollingFallback();
+        try { ws.close(); } catch (e) {}
       };
     } catch (err) {
-      console.error('[Chat Widget] WebSocket error:', err);
+      console.warn('[Chat Widget] WebSocket unavailable, using real-time polling fallback');
+      startPollingFallback();
     }
+  }
+
+  let pollInterval = null;
+  function startPollingFallback() {
+    if (pollInterval) return;
+    pollInterval = setInterval(async () => {
+      if (state.wsConnected || !state.visitorToken || !state.isOpen) return;
+      try {
+        const res = await fetch(`/api/chat/session?visitorToken=${encodeURIComponent(state.visitorToken)}`);
+        const data = await res.json();
+        if (data && data.success && Array.isArray(data.messages)) {
+          data.messages.forEach(msg => appendMessage(msg, null, true));
+        }
+      } catch (e) {}
+    }, 3500);
   }
 
   function renderMessages(messages) {

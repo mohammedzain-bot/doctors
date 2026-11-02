@@ -217,15 +217,36 @@
       ws.onclose = () => {
         state.wsConnected = false;
         clearTimeout(state.reconnectTimer);
-        state.reconnectTimer = setTimeout(connectWebSocket, 4000);
+        state.reconnectTimer = setTimeout(connectWebSocket, 10000);
+        startAdminPollingFallback();
       };
 
       ws.onerror = () => {
-        ws.close();
+        state.wsConnected = false;
+        startAdminPollingFallback();
+        try { ws.close(); } catch (e) {}
       };
     } catch (e) {
-      console.error('[Admin WS] Connection error:', e);
+      console.warn('[Admin WS] WebSocket unavailable, using real-time polling fallback');
+      startAdminPollingFallback();
     }
+  }
+
+  let adminPollInterval = null;
+  function startAdminPollingFallback() {
+    if (adminPollInterval) return;
+    adminPollInterval = setInterval(async () => {
+      if (state.wsConnected || !state.token) return;
+      try {
+        fetchConversations();
+        if (state.activeConversationId) {
+          const res = await apiFetch(`/api/admin/conversations/${state.activeConversationId}`);
+          if (res && res.messages) {
+            res.messages.forEach(msg => appendChatMessage(msg));
+          }
+        }
+      } catch (e) {}
+    }, 4000);
   }
 
   function handleIncomingEnquiry(payload) {
