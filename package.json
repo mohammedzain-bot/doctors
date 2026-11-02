@@ -21,7 +21,7 @@
   },
   "homepage": "https://github.com/mohammedzain-bot/doctors#readme",
   "engines": {
-    "node": ">=22.x"
+    "node": "22.x"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

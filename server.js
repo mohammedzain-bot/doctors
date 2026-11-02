@@ -34,6 +34,20 @@ app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  // Normalize Vercel serverless paths so both /api/path and /path match
+  const rawPath = req.url.split('?')[0];
+  if (!rawPath.startsWith('/api') && 
+      !rawPath.startsWith('/admin') && 
+      !rawPath.startsWith('/style') && 
+      !rawPath.startsWith('/script') && 
+      !rawPath.startsWith('/chat-widget') && 
+      !rawPath.startsWith('/hero-bg') && 
+      rawPath !== '/' && 
+      rawPath !== '/favicon.ico') {
+    const query = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+    req.url = '/api' + (rawPath.startsWith('/') ? rawPath : '/' + rawPath) + query;
+  }
   next();
 });
 

@@ -3,10 +3,16 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
-const { DatabaseSync } = require('node:sqlite');
 const crypto = require('node:crypto');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
+
+let DatabaseSync = null;
+try {
+  DatabaseSync = require('node:sqlite').DatabaseSync;
+} catch (e) {
+  console.warn('[Database] node:sqlite not available on this Node runtime, activating fallback store.');
+}
 
 const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_VERSION);
 let DB_PATH;
@@ -25,7 +31,278 @@ if (isVercel) {
 } else {
   DB_PATH = path.join(__dirname, 'enquiries.db');
 }
-const db = new DatabaseSync(DB_PATH);
+
+function createFallbackDb() {
+  const storeFile = path.join(os.tmpdir(), 'enquiries_fallback.json');
+  let data = {
+    visitors: [],
+    conversations: [],
+    messages: [],
+    appointments: [],
+    admins: []
+  };
+
+  if (fs.existsSync(storeFile)) {
+    try {
+      data = JSON.parse(fs.readFileSync(storeFile, 'utf8'));
+      if (!Array.isArray(data.visitors)) data.visitors = [];
+      if (!Array.isArray(data.conversations)) data.conversations = [];
+      if (!Array.isArray(data.messages)) data.messages = [];
+      if (!Array.isArray(data.appointments)) data.appointments = [];
+      if (!Array.isArray(data.admins)) data.admins = [];
+    } catch (e) {}
+  }
+
+  function save() {
+    try {
+      fs.writeFileSync(storeFile, JSON.stringify(data, null, 2), 'utf8');
+    } catch (e) {}
+  }
+
+  return {
+    exec(sql) {},
+    prepare(sql) {
+      const s = sql.trim().replace(/\s+/g, ' ');
+      return {
+        get(...params) {
+          if (s.includes('FROM admins WHERE email = ?')) {
+            return data.admins.find(a => a.email.toLowerCase() === (params[0] || '').toLowerCase()) || null;
+          }
+          if (s.includes('FROM admins WHERE id = ?')) {
+            return data.admins.find(a => a.id === params[0]) || null;
+          }
+          if (s.includes('FROM visitors WHERE visitor_token = ?')) {
+            return data.visitors.find(v => v.visitor_token === params[0]) || null;
+          }
+          if (s.includes('FROM visitors WHERE id = ?')) {
+            return data.visitors.find(v => v.id === params[0]) || null;
+          }
+          if (s.includes('FROM conversations WHERE visitor_id = ?')) {
+            const list = data.conversations.filter(c => c.visitor_id === params[0])
+              .sort((a, b) => new Date(b.last_message_at || 0) - new Date(a.last_message_at || 0));
+            return list[0] || null;
+          }
+          if (s.includes('FROM conversations c JOIN visitors v') && s.includes('WHERE c.id = ? AND c.visitor_id = ?')) {
+            const conv = data.conversations.find(c => c.id === params[0] && c.visitor_id === params[1]);
+            if (!conv) return null;
+            const vis = data.visitors.find(v => v.id === conv.visitor_id) || {};
+            return { ...conv, visitor_name: vis.username, visitor_phone: vis.phone, visitor_age: vis.age };
+          }
+          if (s.includes('FROM conversations c JOIN visitors v') && s.includes('WHERE c.visitor_id = ?')) {
+            const list = data.conversations.filter(c => c.visitor_id === params[0])
+              .sort((a, b) => new Date(b.last_message_at || 0) - new Date(a.last_message_at || 0));
+            if (!list[0]) return null;
+            const conv = list[0];
+            const vis = data.visitors.find(v => v.id === conv.visitor_id) || {};
+            return { ...conv, visitor_name: vis.username, visitor_phone: vis.phone, visitor_age: vis.age };
+          }
+          if (s.includes('FROM conversations c JOIN visitors v') && s.includes('WHERE c.id = ?')) {
+            const conv = data.conversations.find(c => c.id === params[0]);
+            if (!conv) return null;
+            const vis = data.visitors.find(v => v.id === conv.visitor_id) || {};
+            return { ...conv, visitor_name: vis.username, visitor_phone: vis.phone, visitor_age: vis.age };
+          }
+          if (s.includes('FROM conversations WHERE id = ?')) {
+            return data.conversations.find(c => c.id === params[0]) || null;
+          }
+          if (s.includes('FROM appointments WHERE id = ?')) {
+            return data.appointments.find(a => a.id === params[0]) || null;
+          }
+          if (s.includes('COUNT(*) as total_conversations')) {
+            return {
+              total_conversations: data.conversations.length,
+              unread_messages: data.messages.filter(m => m.sender_type === 'visitor' && !m.read_at).length,
+              total_appointments: data.appointments.length,
+              pending_appointments: data.appointments.filter(a => a.status === 'pending').length
+            };
+          }
+          return null;
+        },
+        all(...params) {
+          if (s.includes('FROM messages WHERE conversation_id = ?')) {
+            return data.messages.filter(m => m.conversation_id === params[0])
+              .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+          }
+          if (s.includes('FROM appointments')) {
+            let list = [...data.appointments];
+            if (params.length > 0 && params[0] && params[0] !== 'all') {
+              list = list.filter(a => a.status === params[0] || a.conversation_id === params[0]);
+            }
+            return list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+          }
+          if (s.includes('FROM conversations c JOIN visitors v')) {
+            let list = data.conversations.map(c => {
+              const vis = data.visitors.find(v => v.id === c.visitor_id) || {};
+              const cMsgs = data.messages.filter(m => m.conversation_id === c.id)
+                .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+              const lastMsg = cMsgs[cMsgs.length - 1];
+              const unread = cMsgs.filter(m => m.sender_type === 'visitor' && !m.read_at).length;
+              return {
+                ...c,
+                visitor_name: vis.username || 'Visitor',
+                visitor_phone: vis.phone || '',
+                visitor_age: vis.age || null,
+                last_message_text: lastMsg ? lastMsg.message_text : '',
+                last_message_sender: lastMsg ? lastMsg.sender_type : '',
+                unread_count: unread
+              };
+            });
+            if (params.length > 0 && typeof params[0] === 'string' && !params[0].startsWith('%')) {
+              list = list.filter(c => c.status === params[0]);
+            }
+            const searchParam = params.find(p => typeof p === 'string' && p.startsWith('%'));
+            if (searchParam) {
+              const term = searchParam.replace(/%/g, '').toLowerCase();
+              list = list.filter(c => 
+                (c.visitor_name && c.visitor_name.toLowerCase().includes(term)) ||
+                (c.visitor_phone && c.visitor_phone.includes(term)) ||
+                (c.last_message_text && c.last_message_text.toLowerCase().includes(term))
+              );
+            }
+            return list.sort((a, b) => new Date(b.last_message_at || 0) - new Date(a.last_message_at || 0));
+          }
+          return [];
+        },
+        run(...params) {
+          if (s.includes('INSERT INTO admins')) {
+            const [id, email, password_hash, name, role] = params;
+            data.admins.push({ id, email, password_hash, name, role: role || 'admin', created_at: new Date().toISOString() });
+            save();
+            return { changes: 1 };
+          }
+          if (s.includes('INSERT INTO visitors')) {
+            const [id, username, age, phone, visitor_token, created_at, updated_at] = params;
+            data.visitors.push({ id, username, age, phone, visitor_token, created_at, updated_at });
+            save();
+            return { changes: 1 };
+          }
+          if (s.includes('UPDATE visitors SET username = ?')) {
+            const [username, age, phone, id] = params;
+            const vis = data.visitors.find(v => v.id === id);
+            if (vis) {
+              vis.username = username;
+              vis.age = age;
+              vis.phone = phone;
+              vis.updated_at = new Date().toISOString();
+            }
+            save();
+            return { changes: 1 };
+          }
+          if (s.includes('INSERT INTO conversations')) {
+            const [id, visitor_id, created_at, updated_at, last_message_at] = params;
+            data.conversations.push({
+              id,
+              visitor_id,
+              status: 'new',
+              admin_notes: '',
+              created_at,
+              updated_at,
+              last_message_at
+            });
+            save();
+            return { changes: 1 };
+          }
+          if (s.includes('UPDATE conversations SET status = ?')) {
+            const [status, updated_at, id] = params;
+            const conv = data.conversations.find(c => c.id === id);
+            if (conv) {
+              conv.status = status;
+              conv.updated_at = updated_at;
+            }
+            save();
+            return { changes: 1 };
+          }
+          if (s.includes('UPDATE conversations SET admin_notes = ?')) {
+            const [notes, updated_at, id] = params;
+            const conv = data.conversations.find(c => c.id === id);
+            if (conv) {
+              conv.admin_notes = notes;
+              conv.updated_at = updated_at;
+            }
+            save();
+            return { changes: 1 };
+          }
+          if (s.includes('UPDATE conversations SET last_message_at = ?')) {
+            const [last_message_at, updated_at, id] = params;
+            const conv = data.conversations.find(c => c.id === id);
+            if (conv) {
+              conv.last_message_at = last_message_at;
+              conv.updated_at = updated_at;
+            }
+            save();
+            return { changes: 1 };
+          }
+          if (s.includes('INSERT INTO messages')) {
+            const [id, conversation_id, sender_type, sender_name, message_text, delivery_status, created_at] = params;
+            data.messages.push({
+              id,
+              conversation_id,
+              sender_type,
+              sender_name,
+              message_text,
+              delivery_status: delivery_status || 'sent',
+              created_at,
+              read_at: null
+            });
+            save();
+            return { changes: 1 };
+          }
+          if (s.includes("UPDATE messages SET delivery_status = 'read'")) {
+            const [read_at, conversation_id, sender_type] = params;
+            data.messages.forEach(m => {
+              if (m.conversation_id === conversation_id && m.sender_type === sender_type && !m.read_at) {
+                m.delivery_status = 'read';
+                m.read_at = read_at;
+              }
+            });
+            save();
+            return { changes: 1 };
+          }
+          if (s.includes('INSERT INTO appointments')) {
+            const [id, visitor_id, conversation_id, patient_name, patient_age, phone, appointment_date, preferred_time, reason_for_visit, status, created_at] = params;
+            data.appointments.push({
+              id,
+              visitor_id,
+              conversation_id,
+              patient_name,
+              patient_age,
+              phone,
+              appointment_date,
+              preferred_time,
+              reason_for_visit,
+              status: status || 'pending',
+              created_at
+            });
+            save();
+            return { changes: 1 };
+          }
+          if (s.includes('UPDATE appointments SET status = ? WHERE id = ?')) {
+            const [status, id] = params;
+            const appt = data.appointments.find(a => a.id === id);
+            if (appt) {
+              appt.status = status;
+            }
+            save();
+            return { changes: 1 };
+          }
+          return { changes: 0 };
+        }
+      };
+    }
+  };
+}
+
+let db;
+if (DatabaseSync) {
+  try {
+    db = new DatabaseSync(DB_PATH);
+  } catch (err) {
+    console.warn('[Database] Could not initialize DatabaseSync, using fallback:', err.message);
+    db = createFallbackDb();
+  }
+} else {
+  db = createFallbackDb();
+}
 
 // Optional Supabase client initialization
 let supabase = null;

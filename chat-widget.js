@@ -219,6 +219,16 @@
     setupEvents();
   }
 
+  // Safe JSON parser to guard against HTML 404/500 responses
+  async function parseJSONSafe(res) {
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      return null;
+    }
+  }
+
   // --- Session & Registration Verification ---
   async function checkSession() {
     if (!state.visitorToken) {
@@ -228,9 +238,9 @@
 
     try {
       const res = await fetch(`/api/chat/session?visitorToken=${encodeURIComponent(state.visitorToken)}`);
-      const data = await res.json();
+      const data = await parseJSONSafe(res);
 
-      if (data.success && !data.requiresRegistration) {
+      if (data && data.success && !data.requiresRegistration) {
         state.isRegistered = true;
         state.visitor = data.visitor;
         state.conversationId = data.conversationId;
@@ -515,17 +525,18 @@
         })
       });
 
+      const data = await parseJSONSafe(res);
       if (!res.ok) {
-        const errData = await res.json();
-        if (errData.requiresRegistration) {
+        if (data && data.requiresRegistration) {
           showRegistrationView();
           return;
         }
-        throw new Error(errData.error || 'Failed to send message');
+        throw new Error((data && data.error) || 'Failed to send message');
       }
 
-      const data = await res.json();
-      appendMessage(data.message);
+      if (data && data.message) {
+        appendMessage(data.message);
+      }
     } catch (err) {
       console.error('[Chat Widget] Failed to send message:', err);
       alert('Unable to send message. Please verify your connection.');
@@ -611,9 +622,12 @@
           })
         });
 
-        const data = await res.json();
+        const data = await parseJSONSafe(res);
         if (!res.ok) {
-          throw new Error(data.error || 'Registration failed');
+          throw new Error((data && data.error) || (res.status === 404 ? 'Service endpoint updating. Please retry in 10 seconds.' : 'Registration failed. Please try again.'));
+        }
+        if (!data || !data.visitor) {
+          throw new Error('Invalid server response. Please try again.');
         }
 
         state.visitor = data.visitor;
